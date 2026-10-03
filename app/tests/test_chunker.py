@@ -12,6 +12,7 @@ pages = extract_pages_from_pdf(pdf_path)
 
 chunks = chunk_pages(
     pages,
+    document_id=document_id,
     chunk_size=1000,
     overlap=200,
 )

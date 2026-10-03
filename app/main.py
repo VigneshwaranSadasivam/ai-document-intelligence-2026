@@ -16,7 +16,9 @@ from app.services.embeddings import (
     generate_embedding,
     generate_embeddings,
 )
-from app.services.vector_search import search_similar_chunks
+from app.services.vector_search import retrieve_relevant_chunks
+from app.services.index_document import index_document
+from app.services.rag import generate_rag_answer
 
 import uuid
 
@@ -151,6 +153,7 @@ def get_document_chunks(
 
         chunks = chunk_pages(
             pages,
+            document_id=document_id,
             chunk_size=1000,
             overlap=200,
         )
@@ -202,6 +205,7 @@ def generate_document_embeddings(
         # 3. Create chunks
         chunks = chunk_pages(
             pages,
+            document_id=document_id,
             chunk_size=1000,
             overlap=200,
         )
@@ -241,25 +245,11 @@ def search_document(
         )
 
     try:
-        local_pdf = download_file_from_gcs(
-            document["gcs_uri"]
-        )
-
-        pages = extract_pages_from_pdf(local_pdf)
-
-        chunks = chunk_pages(
-            pages,
-            chunk_size=1000,
-            overlap=200,
-        )
-
-        embedded_chunks = generate_embeddings(chunks)
-
         query_embedding = generate_embedding(query)
 
-        results = search_similar_chunks(
-            query_embedding,
-            embedded_chunks,
+        results = retrieve_relevant_chunks(
+            document_id=document_id,
+            query_embedding=query_embedding,
             top_k=top_k,
         )
 
@@ -273,4 +263,62 @@ def search_document(
         raise HTTPException(
             status_code=500,
             detail=f"Search failed: {str(exc)}",
+        )
+
+@app.post("/api/v1/documents/{document_id}/index")
+def index_document_endpoint(document_id: str):
+    document = get_document_metadata(document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found",
+        )
+
+    try:
+        result = index_document(document_id)
+
+        return {
+            "document_id": document_id,
+            "status": "indexed",
+            **result,
+        }
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Document indexing failed: {str(exc)}",
+        )
+
+@app.get("/api/v1/documents/{document_id}/ask")
+def ask_document(
+    document_id: str,
+    question: str,
+    top_k: int = 3,
+):
+    document = get_document_metadata(document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found",
+        )
+
+    try:
+        result = generate_rag_answer(
+            document_id=document_id,
+            question=question,
+            top_k=top_k,
+        )
+
+        return {
+            "document_id": document_id,
+            "question": question,
+            **result,
+        }
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Question answering failed: {str(exc)}",
         )

@@ -4,7 +4,10 @@ from google.cloud import storage
 
 BUCKET_NAME = "ai-document-intelligence-2026-documents"
 
-client = storage.Client()
+PROJECT_ID = "ai-document-intelligence-2026"
+client = storage.Client(
+    project=PROJECT_ID
+)
 bucket = client.bucket(BUCKET_NAME)
 
 def upload_file_to_gcs(
