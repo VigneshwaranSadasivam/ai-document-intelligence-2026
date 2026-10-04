@@ -7,3 +7,4 @@ documents/
 tests/
 .env
 *.log
+indexes_operation.txt
