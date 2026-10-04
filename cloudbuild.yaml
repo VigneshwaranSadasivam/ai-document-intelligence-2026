@@ -30,3 +30,5 @@ steps:
 
 images:
   - "asia-south1-docker.pkg.dev/$PROJECT_ID/ai-document-intelligence/app:$COMMIT_SHA"
+options:
+  logging: CLOUD_LOGGING_ONLY
