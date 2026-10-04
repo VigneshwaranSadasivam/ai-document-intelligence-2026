@@ -1,5 +1,8 @@
+import os
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
+import uvicorn
 from app.services.vertex_ai import analyze_document
 from app.services.storage import (
     upload_file_to_gcs, 
@@ -322,3 +325,11 @@ def ask_document(
             status_code=500,
             detail=f"Question answering failed: {str(exc)}",
         )
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=port,
+    )
